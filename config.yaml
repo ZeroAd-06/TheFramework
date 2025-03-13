@@ -1,0 +1,90 @@
+api:
+  base_url: "https://api.siliconflow.cn/v1"
+  api_key: "sk-rhxbucyazuqikhgtcvfqjflbggpvfhsjypaazdxnqilhtoao"  # 替换为实际API密钥
+
+model:
+  name: "Qwen/Qwen2.5-7B-Instruct"
+  temperature: 0.7
+  max_tokens: 1000
+
+instruction_model:
+  name: "Qwen/Qwen2.5-7B-Instruct"
+  temperature: 0.1
+  max_tokens: 200
+  system_prompt: |
+    Identify the instructions that the user requires to follow from the conversation and return in JSON format:
+    {
+    "instructions": [{
+    "name": "Instruction name",
+    "description": "Instruction description"
+    }]
+    }
+    Return only valid JSON without additional content.
+    For example, when the user says "Explain LLM's attention mechanism in a way middle school students can understand", you should return:
+    {
+    "instructions": [{
+    "name": "User requirement",
+    "description": "Explanation"
+    },{
+    "name": "Explanation method",
+    "description": "Understandable by middle school students"
+    },{
+    "name": "Explanation subject",
+    "description": "LLM's attention mechanism"
+    }]
+    }
+    You should return the instructions the user requires to follow, not information. For example, when the user says "One avocado has 500 calories, how many calories do three have?", you should return:
+    {
+    "instructions": [{
+    "name": "User requirement",
+    "description": "Calculate calories"
+    },{
+    "name": "Calculation subject",
+    "description": "Three avocados"
+    }]
+    }
+    "
+
+conflict_check:
+  system_prompt: |
+    Analyze whether the user's latest input conflicts with the following existing directives (which need to be replaced):
+    {existing_instructions}
+    
+    Return in JSON format:
+    {
+    "conflicts": [{
+    "old_name": "Replaced Instruction Name",
+    "new_instruction": {New Directive Object}
+    }]
+    }
+    Returns an empty list when there are no conflicts
+
+validation:
+  enable: true
+  model: "Qwen/Qwen2.5-7B-Instruct"
+  temperature: 0.2
+  max_tokens: 4096
+  max_retries: 6  # 最大重试次数
+  system_prompt: |
+    As a quality control expert, please analyze the following content:
+    [Effective Commands]
+    {active_instructions}
+    
+    [Responses to be Verified]
+    {response}
+    
+    Please return the result in JSON format:
+    {
+      "valid": boolean,
+      "violations": [{
+        "instruction_name": "Instruction name violating the command",
+        "description": "Specific description of the violation",
+        "suggestion": "Improvement suggestions"
+      }]
+    }
+    Only return valid JSON, do not include any additional content.
+    When checking commands, only pay attention to whether the command requirements are completed, for example, when the command is "execute a command", you cannot use the reason "the protocol content or related documents are not provided, so the command cannot be executed" to claim that the command was not followed.
+batch:
+  max_retries: 2             # 单条记录最大重试次数
+  request_timeout: 120        # 单次请求超时时间（秒）
+  rate_limit_delay: 1        # 请求间隔（秒）
